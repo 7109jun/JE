@@ -1,0 +1,66 @@
+name: Build JE
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  linux:
+    name: Linux x64
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -S JE-10-10-AUDITED-FIXED4 -B build/linux -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build/linux --config Release --parallel
+
+      - name: Test
+        run: ctest --test-dir build/linux --output-on-failure
+
+      - name: Package
+        run: |
+          mkdir -p dist
+          cp build/linux/je dist/je-linux-x64
+          chmod +x dist/je-linux-x64
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: je-linux-x64
+          path: dist/je-linux-x64
+
+  windows:
+    name: Windows x64
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -S JE-10-10-AUDITED-FIXED4 -B build\windows
+
+      - name: Build
+        run: cmake --build build\windows --config Release --parallel
+
+      - name: Test
+        run: ctest --test-dir build\windows -C Release --output-on-failure
+
+      - name: Package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item build\windows\Release\je.exe dist\je-windows-x64.exe
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: je-windows-x64
+          path: dist/je-windows-x64.exe
