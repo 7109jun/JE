@@ -1,0 +1,26 @@
+[ JE : O]
+
+AUTHOR = "JE"
+FORMAT = "JE"
+VERSION = 1
+ARCH = X86_64
+
+SYSTEM {
+    ENTRY = main
+}
+
+CODE {
+    main:
+        MOV R0, 40
+        PUSH R0
+        POP R1
+        INC R1
+        CALL sum_two
+        PRINT R0
+        EXIT 0
+
+    sum_two:
+        ADD R1, 1
+        MOV R0, R1
+        RET
+}
