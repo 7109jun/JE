@@ -1,66 +1,77 @@
-name: Build JE
+```yaml
+name: Build JE 1.0 Final
 
 on:
   push:
-    branches: [main, master]
-  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
-  linux:
-    name: Linux x64
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Configure
-        run: cmake -S JE-10-10-AUDITED-FIXED4 -B build/linux -DCMAKE_BUILD_TYPE=Release
-
-      - name: Build
-        run: cmake --build build/linux --config Release --parallel
-
-      - name: Test
-        run: ctest --test-dir build/linux --output-on-failure
-
-      - name: Package
-        run: |
-          mkdir -p dist
-          cp build/linux/je dist/je-linux-x64
-          chmod +x dist/je-linux-x64
-
-      - name: Upload
-        uses: actions/upload-artifact@v4
-        with:
-          name: je-linux-x64
-          path: dist/je-linux-x64
-
-  windows:
-    name: Windows x64
+  build-windows:
+    name: Build Windows x64
     runs-on: windows-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Configure
-        run: cmake -S JE-10-10-AUDITED-FIXED4 -B build\windows
+      - name: Configure CMake
+        shell: bash
+        run: |
+          cmake -S . -B build \
+            -G "MinGW Makefiles" \
+            -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
-        run: cmake --build build\windows --config Release --parallel
+        shell: bash
+        run: |
+          cmake --build build --config Release --parallel
 
       - name: Test
-        run: ctest --test-dir build\windows -C Release --output-on-failure
+        shell: bash
+        run: |
+          ctest --test-dir build --output-on-failure
 
-      - name: Package
+      - name: Check JE executable
+        shell: bash
+        run: |
+          test -f build/je.exe
+
+      - name: Package source
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force dist | Out-Null
-          Copy-Item build\windows\Release\je.exe dist\je-windows-x64.exe
+          if (Test-Path "JE-1.0-final.zip") {
+            Remove-Item "JE-1.0-final.zip" -Force
+          }
 
-      - name: Upload
+          $exclude = @(
+            ".git",
+            "build",
+            "build-*",
+            "target"
+          )
+
+          $items = Get-ChildItem -Force | Where-Object {
+            $exclude -notcontains $_.Name
+          }
+
+          Compress-Archive `
+            -Path $items.FullName `
+            -DestinationPath "JE-1.0-final.zip" `
+            -Force
+
+      - name: Upload JE-1.0-final.zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: JE-1.0-final
+          path: JE-1.0-final.zip
+          if-no-files-found: error
+
+      - name: Upload je.exe
         uses: actions/upload-artifact@v4
         with:
           name: je-windows-x64
-          path: dist/je-windows-x64.exe
+          path: build/je.exe
+          if-no-files-found: error
+```
