@@ -11,6 +11,10 @@ jobs:
     name: Build Windows x64
     runs-on: windows-latest
 
+    defaults:
+      run:
+        working-directory: JE-1.0-final/JE-1.0-final
+
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -38,21 +42,16 @@ jobs:
             exit 1
           }
 
-      - name: Package
+      - name: Package source
         shell: pwsh
+        working-directory: .
         run: |
           if (Test-Path "JE-1.0-final.zip") {
             Remove-Item "JE-1.0-final.zip" -Force
           }
 
-          $items = Get-ChildItem -Force | Where-Object {
-            $_.Name -ne ".git" -and
-            $_.Name -ne "build" -and
-            $_.Name -ne "target"
-          }
-
           Compress-Archive `
-            -Path $items.FullName `
+            -Path "JE-1.0-final/JE-1.0-final/*" `
             -DestinationPath "JE-1.0-final.zip" `
             -Force
 
@@ -67,5 +66,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: je-windows-x64
-          path: build/je.exe
+          path: JE-1.0-final/JE-1.0-final/build/je.exe
           if-no-files-found: error
