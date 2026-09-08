@@ -1,4 +1,3 @@
-```yaml
 name: Build JE 1.0 Final
 
 on:
@@ -17,43 +16,39 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Configure CMake
-        shell: bash
+        shell: pwsh
         run: |
-          cmake -S . -B build \
-            -G "MinGW Makefiles" \
-            -DCMAKE_BUILD_TYPE=Release
+          cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
-        shell: bash
+        shell: pwsh
         run: |
           cmake --build build --config Release --parallel
 
       - name: Test
-        shell: bash
+        shell: pwsh
         run: |
           ctest --test-dir build --output-on-failure
 
-      - name: Check JE executable
-        shell: bash
+      - name: Check executable
+        shell: pwsh
         run: |
-          test -f build/je.exe
+          if (-not (Test-Path "build/je.exe")) {
+            Write-Error "build/je.exe was not created."
+            exit 1
+          }
 
-      - name: Package source
+      - name: Package
         shell: pwsh
         run: |
           if (Test-Path "JE-1.0-final.zip") {
             Remove-Item "JE-1.0-final.zip" -Force
           }
 
-          $exclude = @(
-            ".git",
-            "build",
-            "build-*",
-            "target"
-          )
-
           $items = Get-ChildItem -Force | Where-Object {
-            $exclude -notcontains $_.Name
+            $_.Name -ne ".git" -and
+            $_.Name -ne "build" -and
+            $_.Name -ne "target"
           }
 
           Compress-Archive `
@@ -61,17 +56,16 @@ jobs:
             -DestinationPath "JE-1.0-final.zip" `
             -Force
 
-      - name: Upload JE-1.0-final.zip
+      - name: Upload source package
         uses: actions/upload-artifact@v4
         with:
           name: JE-1.0-final
           path: JE-1.0-final.zip
           if-no-files-found: error
 
-      - name: Upload je.exe
+      - name: Upload Windows executable
         uses: actions/upload-artifact@v4
         with:
           name: je-windows-x64
           path: build/je.exe
           if-no-files-found: error
-```
