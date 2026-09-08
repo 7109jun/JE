@@ -1,4 +1,4 @@
-name: Build JE 1.0 Final
+name: Build JE-1.1-MinGW-fixed
 
 on:
   push:
@@ -8,21 +8,51 @@ on:
 
 jobs:
   build-windows:
-    name: Build Windows x64
+    name: Build Windows x64 (MinGW-w64)
     runs-on: windows-latest
 
     defaults:
       run:
-        working-directory: JE-1.0-final/JE-1.0-final
+        working-directory: JE-1.1-MinGW-fixed
 
     steps:
       - name: Checkout
         uses: actions/checkout@v5
 
+      - name: Setup MinGW-w64
+        shell: pwsh
+        run: |
+          choco install mingw -y --no-progress
+
+          $mingwBin = "C:\ProgramData\mingw64\mingw64\bin"
+
+          if (-not (Test-Path $mingwBin)) {
+            $mingwBin = "C:\mingw64\bin"
+          }
+
+          if (-not (Test-Path $mingwBin)) {
+            Write-Error "MinGW-w64 bin directory was not found."
+            exit 1
+          }
+
+          $env:PATH = "$mingwBin;$env:PATH"
+          "PATH=$env:PATH" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8
+
+      - name: Check MinGW
+        shell: pwsh
+        run: |
+          gcc --version
+          mingw32-make --version
+          cmake --version
+
       - name: Configure CMake
         shell: pwsh
         run: |
-          cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
+          cmake -S . `
+            -B build `
+            -G "MinGW Makefiles" `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_C_COMPILER=gcc
 
       - name: Build
         shell: pwsh
@@ -32,7 +62,10 @@ jobs:
       - name: Test
         shell: pwsh
         run: |
-          ctest --test-dir build --output-on-failure
+          ctest `
+            --test-dir build `
+            --output-on-failure `
+            -C Release
 
       - name: Check executable
         shell: pwsh
@@ -42,29 +75,33 @@ jobs:
             exit 1
           }
 
-      - name: Package source
-        shell: pwsh
-        working-directory: .
-        run: |
-          if (Test-Path "JE-1.0-final.zip") {
-            Remove-Item "JE-1.0-final.zip" -Force
-          }
+          Get-Item "build/je.exe" | Format-List Name,Length,FullName
 
-          Compress-Archive `
-            -Path "JE-1.0-final/JE-1.0-final/*" `
-            -DestinationPath "JE-1.0-final.zip" `
+      - name: Test JE runtime examples
+        shell: pwsh
+        run: |
+          .\build\je.exe run examples\runtime_memory.jxj
+          .\build\je.exe run examples\runtime_file_io.jxj
+
+      - name: Package Windows executable
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+
+          Copy-Item `
+            "build\je.exe" `
+            "dist\je.exe" `
             -Force
 
-      - name: Upload source package
-        uses: actions/upload-artifact@v4
-        with:
-          name: JE-1.0-final
-          path: JE-1.0-final.zip
-          if-no-files-found: error
+          Copy-Item `
+            "examples" `
+            "dist\examples" `
+            -Recurse `
+            -Force
 
-      - name: Upload Windows executable
+      - name: Upload Windows x64 build
         uses: actions/upload-artifact@v4
         with:
-          name: je-windows-x64
-          path: JE-1.0-final/JE-1.0-final/build/je.exe
+          name: JE-1.1-MinGW-fixed-Windows-x64
+          path: JE-1.1-MinGW-fixed/dist
           if-no-files-found: error
