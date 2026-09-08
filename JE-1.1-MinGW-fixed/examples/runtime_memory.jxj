@@ -1,0 +1,36 @@
+[ JE : O]
+
+AUTHOR = "JE"
+FORMAT = "JE"
+VERSION = 1
+ARCH = X86_64
+
+SYSTEM {
+    ENTRY = main
+    SUBSYSTEM = CONSOLE
+}
+
+SECTION .text {
+    CODE {
+        main:
+            MOV R0, 64
+            CALL IMPORT.malloc
+            MOV R4, R0
+
+            MOV R0, R4
+            MOV R1, 0
+            MOV R2, 64
+            CALL IMPORT.memset
+
+            STR R0, "JE malloc/free works"
+            MOV R5, R0
+            MOV R0, R5
+            PRINTS R0
+
+            MOV R0, R5
+            CALL IMPORT.free
+            MOV R0, R4
+            CALL IMPORT.free
+            EXIT 0
+    }
+}

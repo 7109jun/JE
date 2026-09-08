@@ -1,0 +1,68 @@
+[ JE : O]
+
+AUTHOR = "JE"
+FORMAT = "JE"
+VERSION = 1
+ARCH = X86_64
+
+SYSTEM {
+    ENTRY = main
+    SUBSYSTEM = CONSOLE
+}
+
+SECTION .text {
+    CODE {
+        main:
+            STR R0, "je_runtime_test.tmp"
+            MOV R4, R0
+            STR R0, "wb"
+            MOV R5, R0
+
+            MOV R0, R4
+            MOV R1, R5
+            CALL IMPORT.fopen
+            MOV R6, R0
+
+            STR R0, "JE runtime I/O OK\n"
+            MOV R7, R0
+            MOV R0, R7
+            MOV R1, 1
+            MOV R2, 18
+            MOV R3, R6
+            CALL IMPORT.fwrite
+
+            MOV R0, R6
+            CALL IMPORT.fclose
+
+            STR R0, "je_runtime_test.tmp"
+            MOV R4, R0
+            STR R0, "rb"
+            MOV R5, R0
+            MOV R0, R4
+            MOV R1, R5
+            CALL IMPORT.fopen
+            MOV R6, R0
+
+            MOV R0, 64
+            CALL IMPORT.malloc
+            MOV R4, R0
+            MOV R0, R4
+            MOV R1, 0
+            MOV R2, 64
+            CALL IMPORT.memset
+
+            MOV R0, R4
+            MOV R1, 1
+            MOV R2, 18
+            MOV R3, R6
+            CALL IMPORT.fread
+
+            MOV R0, R6
+            CALL IMPORT.fclose
+
+            MOV R0, R4
+            PRINTS R0
+            CALL IMPORT.free
+            EXIT 0
+    }
+}
