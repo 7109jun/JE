@@ -1,4 +1,4 @@
-name: Build JE-1.0-final
+name: TE_SourceCode
 
 on:
   push:
