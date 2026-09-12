@@ -1,0 +1,152 @@
+# ===== TE (Text Executable) Format =====
+te_version: 1.0
+format: "text-executable"
+file_extension: ".yac"
+
+# ===== Metadata =====
+metadata:
+  name: "simple_calculator"
+  version: "1.0"
+  target_os: [linux, windows]
+  architecture: [x86-64]
+  entry_point: "main"
+  author: "TE Team"
+  description: "Simple arithmetic calculator demonstrating multiple functions"
+  timestamp: "2024-01-15T10:05:00Z"
+
+# ===== Imports =====
+imports:
+  syscalls:
+    - write
+    - read
+    - exit
+  libraries:
+    - libc
+
+# ===== Data Section =====
+data:
+  strings:
+    prompt_add: "Enter two numbers for addition:\n"
+    prompt_sub: "Enter two numbers for subtraction:\n"
+    prompt_mul: "Enter two numbers for multiplication:\n"
+    prompt_div: "Enter dividend and divisor:\n"
+    result_label: "Result: "
+    newline: "\n"
+    error_div_zero: "Error: Division by zero!\n"
+  constants:
+    stdout: 1
+    stdin: 0
+    stderr: 2
+    exit_success: 0
+    buffer_size: 32
+
+# ===== Code Section (Assembly) =====
+code:
+  main:
+    # Initialize and display menu
+    mov rax, 1
+    mov rdi, 1
+    lea rsi, [prompt_add]
+    mov rdx, 32
+    syscall
+    
+    # Call add function
+    call add
+    
+    # Print result
+    call print_result
+    
+    # Exit successfully
+    mov rax, 60
+    mov rdi, 0
+    syscall
+  
+  add:
+    # rax = arg1 (from input)
+    # rbx = arg2 (from input)
+    # rcx = result
+    push rbp
+    mov rbp, rsp
+    
+    # Simple addition: rcx = rax + rbx
+    add rax, rbx
+    mov rcx, rax
+    
+    pop rbp
+    ret
+  
+  subtract:
+    push rbp
+    mov rbp, rsp
+    
+    # Simple subtraction: rcx = rax - rbx
+    sub rax, rbx
+    mov rcx, rax
+    
+    pop rbp
+    ret
+  
+  multiply:
+    push rbp
+    mov rbp, rsp
+    
+    # Simple multiplication: rcx = rax * rbx
+    imul rax, rbx
+    mov rcx, rax
+    
+    pop rbp
+    ret
+  
+  divide:
+    push rbp
+    mov rbp, rsp
+    
+    # Check for division by zero
+    cmp rbx, 0
+    je div_error
+    
+    # Simple division: rcx = rax / rbx
+    cdq                # sign extend rax to rdx:rax
+    idiv rbx
+    mov rcx, rax
+    
+    pop rbp
+    ret
+  
+  div_error:
+    # Print error message
+    mov rax, 1
+    mov rdi, 2
+    lea rsi, [error_div_zero]
+    mov rdx, 26
+    syscall
+    
+    # Return with -1
+    mov rcx, -1
+    
+    pop rbp
+    ret
+  
+  print_result:
+    push rbp
+    mov rbp, rsp
+    
+    # Print "Result: "
+    mov rax, 1
+    mov rdi, 1
+    lea rsi, [result_label]
+    mov rdx, 8
+    syscall
+    
+    # Print result value (simplified - would need conversion)
+    # mov rax, rcx  # Move result to print
+    
+    # Print newline
+    mov rax, 1
+    mov rdi, 1
+    lea rsi, [newline]
+    mov rdx, 1
+    syscall
+    
+    pop rbp
+    ret

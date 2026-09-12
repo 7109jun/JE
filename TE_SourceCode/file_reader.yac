@@ -1,0 +1,181 @@
+# ===== TE (Text Executable) Format =====
+te_version: 1.0
+format: "text-executable"
+file_extension: ".yac"
+
+# ===== Metadata =====
+metadata:
+  name: "file_reader"
+  version: "1.0"
+  target_os: [linux, windows]
+  architecture: [x86-64]
+  entry_point: "main"
+  author: "TE Team"
+  description: "File reader demonstrating syscalls: open, read, write, close"
+  timestamp: "2024-01-15T10:10:00Z"
+
+# ===== Imports =====
+imports:
+  syscalls:
+    - open
+    - read
+    - write
+    - close
+    - exit
+  libraries:
+    - libc
+
+# ===== Data Section =====
+data:
+  strings:
+    filename: "/tmp/test.txt"
+    prompt_open: "Opening file: /tmp/test.txt\n"
+    prompt_read: "Reading file contents...\n"
+    prompt_close: "Closing file\n"
+    prompt_done: "Done!\n"
+    error_open: "Error: Could not open file\n"
+    error_read: "Error: Could not read file\n"
+  constants:
+    stdout: 1
+    stdin: 0
+    stderr: 2
+    exit_success: 0
+    exit_failure: 1
+    buffer_size: 4096
+    # Open flags
+    O_RDONLY: 0
+    O_WRONLY: 1
+    O_RDWR: 2
+    O_CREAT: 64
+    O_TRUNC: 512
+    # File modes
+    S_IRUSR: 256
+    S_IWUSR: 128
+    S_IXUSR: 64
+
+# ===== Code Section (Assembly) =====
+code:
+  main:
+    # Print "Opening file..."
+    mov rax, 1
+    mov rdi, 1
+    lea rsi, [prompt_open]
+    mov rdx, 26
+    syscall
+    
+    # Call open_file function
+    call open_file
+    
+    # Check if file opened successfully
+    cmp rax, 0
+    jl open_failed
+    
+    # Save file descriptor
+    mov r8, rax  # r8 = fd
+    
+    # Print "Reading file..."
+    mov rax, 1
+    mov rdi, 1
+    lea rsi, [prompt_read]
+    mov rdx, 22
+    syscall
+    
+    # Call read_file with fd in r8
+    mov rdi, r8
+    call read_file
+    
+    # Print "Closing file..."
+    mov rax, 1
+    mov rdi, 1
+    lea rsi, [prompt_close]
+    mov rdx, 15
+    syscall
+    
+    # Call close_file with fd in r8
+    mov rdi, r8
+    call close_file
+    
+    # Print "Done!"
+    mov rax, 1
+    mov rdi, 1
+    lea rsi, [prompt_done]
+    mov rdx, 6
+    syscall
+    
+    jmp exit_success
+  
+  open_failed:
+    # Print error message
+    mov rax, 1
+    mov rdi, 2
+    lea rsi, [error_open]
+    mov rdx, 27
+    syscall
+    
+    jmp exit_failure
+  
+  open_file:
+    # syscall: open(filename, O_RDONLY, mode)
+    push rbp
+    mov rbp, rsp
+    
+    mov rax, 2              # syscall: open
+    lea rdi, [filename]     # filename
+    mov rsi, 0              # flags: O_RDONLY
+    mov rdx, 0              # mode (not needed for O_RDONLY)
+    syscall
+    
+    pop rbp
+    ret
+  
+  read_file:
+    # rdi = file descriptor
+    # Read and print file contents
+    push rbp
+    mov rbp, rsp
+    sub rsp, 4096           # Allocate buffer on stack
+    
+    mov r8, rdi             # Save fd
+    
+    # syscall: read(fd, buffer, count)
+    mov rax, 0              # syscall: read
+    mov rdi, r8             # fd
+    lea rsi, [rsp]          # buffer
+    mov rdx, 4096           # count
+    syscall
+    
+    # rax now contains bytes read
+    mov rcx, rax            # rcx = bytes read
+    
+    # Print the contents
+    mov rax, 1              # syscall: write
+    mov rdi, 1              # fd: stdout
+    lea rsi, [rsp]          # buffer
+    mov rdx, rcx            # count: bytes read
+    syscall
+    
+    mov rsp, rbp
+    pop rbp
+    ret
+  
+  close_file:
+    # rdi = file descriptor
+    push rbp
+    mov rbp, rsp
+    
+    mov rax, 3              # syscall: close
+    # rdi already contains fd
+    syscall
+    
+    pop rbp
+    ret
+  
+  exit_success:
+    mov rax, 60
+    mov rdi, 0
+    syscall
+  
+  exit_failure:
+    mov rax, 60
+    mov rdi, 1
+    syscall

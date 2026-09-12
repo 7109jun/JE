@@ -1,0 +1,51 @@
+# ===== TE (Text Executable) Format =====
+te_version: 1.0
+format: "text-executable"
+file_extension: ".yac"
+
+# ===== Metadata =====
+metadata:
+  name: "hello_world"
+  version: "1.0"
+  target_os: [linux, windows]
+  architecture: [x86-64]
+  entry_point: "main"
+  author: "TE Team"
+  description: "Classic Hello World program in TE format"
+  timestamp: "2024-01-15T10:00:00Z"
+
+# ===== Imports =====
+imports:
+  syscalls:
+    - write
+    - exit
+  libraries:
+    - libc
+    - kernel32
+
+# ===== Data Section =====
+data:
+  strings:
+    msg_hello: "Hello, World!\n"
+    msg_newline: "\n"
+  constants:
+    stdout: 1
+    stderr: 2
+    exit_success: 0
+    exit_failure: 1
+    msg_len: 14
+
+# ===== Code Section (Assembly) =====
+code:
+  main:
+    # Linux x86-64: syscall write(1, msg_hello, 14)
+    mov rax, 1              # syscall number: write
+    mov rdi, 1              # fd: stdout (1)
+    lea rsi, [msg_hello]    # buffer: address of msg_hello
+    mov rdx, 14             # count: message length
+    syscall                 # invoke syscall
+    
+    # Exit with status 0
+    mov rax, 60             # syscall number: exit
+    mov rdi, 0              # exit code: success
+    syscall                 # invoke syscall
